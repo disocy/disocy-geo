@@ -1,0 +1,69 @@
+{
+  "name": "@disocy/geo",
+  "version": "0.1.0",
+  "description": "Disocy geographic intelligence library with normalized country, subdivision, and city datasets",
+  "type": "module",
+  "private": true,
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "require": "./src/index.js"
+    },
+    "./populate": {
+      "types": "./src/populate/index.d.ts",
+      "import": "./src/populate/index.js"
+    },
+    "./core": {
+      "types": "./src/core/index.d.ts",
+      "import": "./src/core/index.js"
+    },
+    "./addressing": {
+      "types": "./src/addressing/index.d.ts",
+      "import": "./src/addressing/index.js"
+    },
+    "./compliance": {
+      "types": "./src/compliance/index.d.ts",
+      "import": "./src/compliance/index.js"
+    },
+    "./metadata": {
+      "types": "./src/metadata/index.d.ts",
+      "import": "./src/metadata/index.js"
+    },
+    "./search": {
+      "types": "./src/search/index.d.ts",
+      "import": "./src/search/index.js"
+    },
+    "./runtime": {
+      "types": "./src/runtime/index.d.ts",
+      "import": "./src/runtime/index.js"
+    }
+  },
+  "scripts": {
+    "populate:data": "node src/scripts/populate-geo-data.js",
+    "build:data": "node src/scripts/build-geo-dist.js",
+    "test": "node src/scripts/build-geo-dist.js && node --test src/tests/*.test.js"
+  },
+  "keywords": [
+    "disocy",
+    "geo",
+    "geography",
+    "countries",
+    "subdivisions",
+    "cities",
+    "geonames",
+    "iso3166",
+    "unm49",
+    "logistics"
+  ],
+  "author": "Aaron Retamero <aaron@disocy.com>",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "yauzl": "^2.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
