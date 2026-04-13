@@ -89,19 +89,19 @@ The generated `dist/` is organized by domain and country shard to minimize runti
 
 This keeps runtime reads narrow and predictable instead of loading giant global JSON blobs.
 
-## GitHub As Dataset API
+## GitHub Pages As Dataset API
 
-This repository is designed to keep code in Git while treating GitHub Releases as the transport layer for the generated dataset.
+This repository keeps code in Git while publishing the generated dataset to GitHub Pages as static JSON shards.
 
 The intended flow is:
 
 1. GitHub Actions checks upstream GeoNames and UN sources every day.
 2. If upstream changed, the workflow runs `populate:data`.
-3. The workflow packs `dist/` as `geo-dist.tar.gz`.
-4. The workflow publishes that archive as a GitHub Release asset.
-5. Consumer apps can let the library fetch the latest archive automatically.
+3. The workflow builds `dist/`.
+4. The workflow deploys `dist/` to GitHub Pages.
+5. Runtime consumers fetch only the shards they need over HTTPS.
 
-This avoids committing multi-gigabyte generated artifacts into Git while still making the dataset easy to consume from CI, local development, or deployments.
+This avoids committing multi-gigabyte generated artifacts into Git while also avoiding local dataset installs in consumer apps.
 
 ### Daily Refresh Workflow
 
@@ -112,23 +112,24 @@ It:
 - runs daily on a cron schedule
 - checks upstream headers through `.github/scripts/check-geo-sources.mjs`
 - skips the expensive rebuild when sources did not change
-- publishes a fresh `geo-dist.tar.gz` release asset when they did
+- deploys the refreshed `dist/` to GitHub Pages when they did
 
-### Consumer URL
+### Runtime Base URL
 
-The package CLI restores `dist/` from the latest GitHub release asset on demand:
+The runtime uses GitHub Pages directly:
 
-```bash
-pnpm exec disocy-geo ensure
+```txt
+https://disocy.github.io/disocy-geo/
 ```
 
-Or from code:
+Examples:
 
-```js
-import { ensureGeoDataset } from "@disocy/geo/setup";
+- `https://disocy.github.io/disocy-geo/core/countries.json`
+- `https://disocy.github.io/disocy-geo/core/subdivisions-by-country/ES.json`
+- `https://disocy.github.io/disocy-geo/core/localities/by-country-state/ES/51.json`
+- `https://disocy.github.io/disocy-geo/addressing/postal-codes/ES.json`
 
-await ensureGeoDataset();
-```
+All public data access APIs are asynchronous because they fetch remote shards.
 
 ## Public API
 
@@ -143,6 +144,9 @@ import {
   getCountryOperationalMetadata,
   getCountryMetadata,
 } from "@disocy/geo";
+
+const country = await getCountry("ES");
+const subdivisions = await listSubdivisions("ES");
 ```
 
 ### Core
@@ -159,6 +163,9 @@ import {
   findCityByName,
   getCityDetails,
 } from "@disocy/geo/core";
+
+const countries = await listCountries();
+const city = await getCityDetails({ name: "Jatar", countryCode: "ES" });
 ```
 
 ### Addressing
@@ -168,6 +175,8 @@ import {
   getShippingProfile,
   getCountryOperationalMetadata,
 } from "@disocy/geo/addressing";
+
+const shipping = await getCountryOperationalMetadata("ES");
 ```
 
 ### Compliance
@@ -177,6 +186,8 @@ import {
   getCustomsMetadata,
   getTradeRegionMetadata,
 } from "@disocy/geo/compliance";
+
+const customs = await getCustomsMetadata("ES");
 ```
 
 ### Metadata
@@ -187,6 +198,8 @@ import {
   getCountryMetadata,
   listCountryMetadata,
 } from "@disocy/geo/metadata";
+
+const metadata = await getCountryMetadata("ES");
 ```
 
 ### Search
@@ -198,6 +211,8 @@ import {
   findCityByName,
   getCityDetails,
 } from "@disocy/geo/search";
+
+const cities = await searchCities("Jatar", { countryCode: "ES" });
 ```
 
 ## Main Runtime Entities

@@ -1,7 +1,7 @@
 import { getCountryOperationalMetadata } from "../addressing/shipping-rules.js";
 
-export function getPhoneMetadata(countryCode) {
-  const metadata = getCountryOperationalMetadata(countryCode);
+export async function getPhoneMetadata(countryCode) {
+  const metadata = await getCountryOperationalMetadata(countryCode);
   if (!metadata) {
     return null;
   }

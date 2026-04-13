@@ -6,9 +6,6 @@
   "private": true,
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
-  "bin": {
-    "disocy-geo": "./src/scripts/disocy-geo.js"
-  },
   "exports": {
     ".": {
       "types": "./src/index.d.ts",
@@ -42,13 +39,9 @@
     "./runtime": {
       "types": "./src/runtime/index.d.ts",
       "import": "./src/runtime/index.js"
-    },
-    "./setup": {
-      "import": "./src/setup/index.js"
     }
   },
   "scripts": {
-    "ensure:data": "node src/scripts/disocy-geo.js ensure",
     "populate:data": "node src/scripts/populate-geo-data.js",
     "build:data": "node src/scripts/build-geo-dist.js",
     "test": "node src/scripts/build-geo-dist.js && node --test src/tests/*.test.js"

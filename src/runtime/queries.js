@@ -61,12 +61,12 @@ function sortMatches(left, right) {
   return (right.city.population ?? 0) - (left.city.population ?? 0);
 }
 
-function resolveCandidateCities(options = {}) {
+async function resolveCandidateCities(options = {}) {
   const normalizedCountryCode = normalizeCountryCode(options.countryCode);
   const normalizedSubdivisionCode = normalizeSubdivisionCode(options.subdivisionCode);
 
   if (normalizedCountryCode && normalizedSubdivisionCode) {
-    const subdivisionKey = resolveSubdivisionKey(normalizedCountryCode, normalizedSubdivisionCode);
+    const subdivisionKey = await resolveSubdivisionKey(normalizedCountryCode, normalizedSubdivisionCode);
     if (!subdivisionKey) {
       return [];
     }
@@ -81,8 +81,8 @@ function resolveCandidateCities(options = {}) {
   return [];
 }
 
-function buildCityDetails(city) {
-  const enriched = enrichGeoRecord({
+async function buildCityDetails(city) {
+  const enriched = await enrichGeoRecord({
     countryCode: city.countryCode,
     subdivisionCode: city.subdivisionCode,
     geonameId: city.geonameId,
@@ -99,7 +99,7 @@ function buildCityDetails(city) {
   };
 }
 
-export function searchCities(query, options = {}) {
+export async function searchCities(query, options = {}) {
   const normalizedQuery = normalizePlaceName(query);
   if (!normalizedQuery) {
     return [];
@@ -108,7 +108,7 @@ export function searchCities(query, options = {}) {
   const queryTokens = tokenizePlaceName(query);
   const exact = options.exact === true;
   const limit = Number.isInteger(options.limit) && options.limit > 0 ? options.limit : 10;
-  const candidates = resolveCandidateCities(options);
+  const candidates = await resolveCandidateCities(options);
   const matches = [];
 
   for (const city of candidates) {
@@ -118,7 +118,7 @@ export function searchCities(query, options = {}) {
     }
 
     matches.push({
-      ...buildCityDetails(city),
+      ...await buildCityDetails(city),
       matchScore,
       matchedQuery: normalizedQuery,
     });
@@ -128,17 +128,17 @@ export function searchCities(query, options = {}) {
   return matches.slice(0, limit);
 }
 
-export function findCityByName(name, options = {}) {
-  return searchCities(name, {
+export async function findCityByName(name, options = {}) {
+  return (await searchCities(name, {
     ...options,
     exact: options.exact ?? false,
     limit: 1,
-  })[0] ?? null;
+  }))[0] ?? null;
 }
 
-export function getCityDetails(input = {}) {
+export async function getCityDetails(input = {}) {
   if (Number.isInteger(Number(input.geonameId))) {
-    const city = findCityByGeonameId(input.geonameId, {
+    const city = await findCityByGeonameId(input.geonameId, {
       countryCode: input.countryCode,
     });
 
@@ -146,7 +146,7 @@ export function getCityDetails(input = {}) {
   }
 
   if (typeof input.name === "string" && input.name.trim()) {
-    const result = findCityByName(input.name, {
+    const result = await findCityByName(input.name, {
       countryCode: input.countryCode,
       subdivisionCode: input.subdivisionCode,
       exact: input.exact,
@@ -164,9 +164,9 @@ export function getCityDetails(input = {}) {
   }
 
   if (input.countryCode || input.subdivisionCode) {
-    const country = input.countryCode ? getCountry(input.countryCode) : null;
-    const subdivision = input.subdivisionCode ? getSubdivision(input.subdivisionCode) : null;
-    const enriched = enrichGeoRecord({
+    const country = input.countryCode ? await getCountry(input.countryCode) : null;
+    const subdivision = input.subdivisionCode ? await getSubdivision(input.subdivisionCode) : null;
+    const enriched = await enrichGeoRecord({
       countryCode: input.countryCode,
       subdivisionCode: input.subdivisionCode,
     });

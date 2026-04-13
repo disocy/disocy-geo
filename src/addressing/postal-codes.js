@@ -36,11 +36,11 @@ function scorePostalCodeMatch(record, normalizedPlaceName, normalizedAdmin1Name,
   return score;
 }
 
-export function listPostalCodes(countryCode) {
-  return [...loadPostalCodesByCountry(countryCode)];
+export async function listPostalCodes(countryCode) {
+  return [...await loadPostalCodesByCountry(countryCode)];
 }
 
-export function findPostalCodesByPlaceName(countryCode, placeName, options = {}) {
+export async function findPostalCodesByPlaceName(countryCode, placeName, options = {}) {
   const normalizedCountryCode = normalizeCountryCode(countryCode);
   const normalizedPlaceName = normalizePlaceName(placeName);
 
@@ -51,7 +51,7 @@ export function findPostalCodesByPlaceName(countryCode, placeName, options = {})
   const normalizedAdmin1Name = normalizePlaceName(options.admin1Name);
   const normalizedAdmin2Name = normalizePlaceName(options.admin2Name);
 
-  return listPostalCodes(normalizedCountryCode)
+  return (await listPostalCodes(normalizedCountryCode))
     .map((record) => ({
       record,
       score: scorePostalCodeMatch(record, normalizedPlaceName, normalizedAdmin1Name, normalizedAdmin2Name),
@@ -67,6 +67,6 @@ export function findPostalCodesByPlaceName(countryCode, placeName, options = {})
     .map((entry) => entry.record);
 }
 
-export function findPostalCodeByPlaceName(countryCode, placeName, options = {}) {
-  return findPostalCodesByPlaceName(countryCode, placeName, options)[0] ?? null;
+export async function findPostalCodeByPlaceName(countryCode, placeName, options = {}) {
+  return (await findPostalCodesByPlaceName(countryCode, placeName, options))[0] ?? null;
 }

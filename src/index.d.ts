@@ -184,38 +184,38 @@ export interface GetCityDetailsInput {
 export const GEO_DATASET_VERSION: string;
 export const OFFICIAL_SOURCE_NAMES: readonly string[];
 
-export function listCountries(): CountryRecord[];
-export function getCountry(code: CountryCode): CountryRecord | null;
-export function hasCountry(code: CountryCode): boolean;
+export function listCountries(): Promise<CountryRecord[]>;
+export function getCountry(code: CountryCode): Promise<CountryRecord | null>;
+export function hasCountry(code: CountryCode): Promise<boolean>;
 
-export function listSubdivisions(countryCode: CountryCode): SubdivisionRecord[];
-export function getSubdivision(code: SubdivisionCode): SubdivisionRecord | null;
-export function hasSubdivision(code: SubdivisionCode): boolean;
+export function listSubdivisions(countryCode: CountryCode): Promise<SubdivisionRecord[]>;
+export function getSubdivision(code: SubdivisionCode): Promise<SubdivisionRecord | null>;
+export function hasSubdivision(code: SubdivisionCode): Promise<boolean>;
 
-export function listCityShards(countryCode?: CountryCode): CityShardRecord[];
-export function listCitiesBySubdivision(countryCode: CountryCode, subdivisionKeyOrCode: string): CityRecord[];
-export function listCitiesByCountry(countryCode: CountryCode): CityRecord[];
-export function findCityByGeonameId(geonameId: GeonameId, options?: FindCityOptions): CityRecord | null;
+export function listCityShards(countryCode?: CountryCode): Promise<CityShardRecord[]>;
+export function listCitiesBySubdivision(countryCode: CountryCode, subdivisionKeyOrCode: string): Promise<CityRecord[]>;
+export function listCitiesByCountry(countryCode: CountryCode): Promise<CityRecord[]>;
+export function findCityByGeonameId(geonameId: GeonameId, options?: FindCityOptions): Promise<CityRecord | null>;
 export function normalizePlaceName(value: string): string;
-export function searchCities(query: string, options?: SearchCitiesOptions): CitySearchResult[];
-export function findCityByName(name: string, options?: SearchCitiesOptions): CitySearchResult | null;
-export function getCityDetails(input: GetCityDetailsInput): GeoCityDetailsResult | null;
+export function searchCities(query: string, options?: SearchCitiesOptions): Promise<CitySearchResult[]>;
+export function findCityByName(name: string, options?: SearchCitiesOptions): Promise<CitySearchResult | null>;
+export function getCityDetails(input: GetCityDetailsInput): Promise<GeoCityDetailsResult | null>;
 
-export function enrichGeoRecord(input: GeoEnrichmentInput): GeoEnrichmentResult;
-export function getShippingProfile(countryCode: CountryCode): ShippingProfile | null;
-export function getCountryOperationalMetadata(countryCode: CountryCode): CountryOperationalMetadata | null;
-export function getAdministrativeDivisionMetadata(countryCode: CountryCode): AdministrativeDivisionMetadata | null;
-export function listPostalCodes(countryCode: CountryCode): PostalCodeRecord[];
+export function enrichGeoRecord(input: GeoEnrichmentInput): Promise<GeoEnrichmentResult>;
+export function getShippingProfile(countryCode: CountryCode): Promise<ShippingProfile | null>;
+export function getCountryOperationalMetadata(countryCode: CountryCode): Promise<CountryOperationalMetadata | null>;
+export function getAdministrativeDivisionMetadata(countryCode: CountryCode): Promise<AdministrativeDivisionMetadata | null>;
+export function listPostalCodes(countryCode: CountryCode): Promise<PostalCodeRecord[]>;
 export function findPostalCodesByPlaceName(countryCode: CountryCode, placeName: string, options?: {
     admin1Name?: string;
     admin2Name?: string;
-}): PostalCodeRecord[];
+}): Promise<PostalCodeRecord[]>;
 export function findPostalCodeByPlaceName(countryCode: CountryCode, placeName: string, options?: {
     admin1Name?: string;
     admin2Name?: string;
-}): PostalCodeRecord | null;
-export function getCustomsMetadata(countryCode: CountryCode): CustomsMetadata | null;
-export function getTradeRegionMetadata(countryCode: CountryCode): TradeRegionMetadata | null;
-export function getPhoneMetadata(countryCode: CountryCode): PhoneMetadata | null;
-export function listCountryMetadata(): CountryMetadata[];
-export function getCountryMetadata(countryCode: CountryCode): CountryMetadata | null;
+}): Promise<PostalCodeRecord | null>;
+export function getCustomsMetadata(countryCode: CountryCode): Promise<CustomsMetadata | null>;
+export function getTradeRegionMetadata(countryCode: CountryCode): Promise<TradeRegionMetadata | null>;
+export function getPhoneMetadata(countryCode: CountryCode): Promise<PhoneMetadata | null>;
+export function listCountryMetadata(): Promise<CountryMetadata[]>;
+export function getCountryMetadata(countryCode: CountryCode): Promise<CountryMetadata | null>;

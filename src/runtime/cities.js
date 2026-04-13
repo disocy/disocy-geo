@@ -5,8 +5,8 @@ import {
 } from "./store.js";
 import { resolveSubdivisionKey } from "./subdivisions.js";
 
-export function listCityShards(countryCode) {
-  const manifest = loadCitiesManifest();
+export async function listCityShards(countryCode) {
+  const manifest = await loadCitiesManifest();
   const normalizedCountryCode = normalizeCountryCode(countryCode);
 
   if (normalizedCountryCode) {
@@ -16,29 +16,31 @@ export function listCityShards(countryCode) {
   return Object.values(manifest.countries).flatMap((entries) => Object.values(entries));
 }
 
-export function listCitiesBySubdivision(countryCode, subdivisionKeyOrCode) {
+export async function listCitiesBySubdivision(countryCode, subdivisionKeyOrCode) {
   const normalizedCountryCode = normalizeCountryCode(countryCode);
-  const subdivisionKey = resolveSubdivisionKey(normalizedCountryCode, subdivisionKeyOrCode);
+  const subdivisionKey = await resolveSubdivisionKey(normalizedCountryCode, subdivisionKeyOrCode);
 
   if (!normalizedCountryCode || !subdivisionKey) {
     return [];
   }
 
-  return [...loadCityShard(normalizedCountryCode, subdivisionKey)];
+  return [...await loadCityShard(normalizedCountryCode, subdivisionKey)];
 }
 
-export function listCitiesByCountry(countryCode) {
+export async function listCitiesByCountry(countryCode) {
   const normalizedCountryCode = normalizeCountryCode(countryCode);
   if (!normalizedCountryCode) {
     return [];
   }
 
-  return listCityShards(normalizedCountryCode).flatMap((shard) =>
-    loadCityShard(normalizedCountryCode, shard.subdivisionKey),
+  const shards = await listCityShards(normalizedCountryCode);
+  const cityLists = await Promise.all(
+    shards.map((shard) => loadCityShard(normalizedCountryCode, shard.subdivisionKey)),
   );
+  return cityLists.flatMap((entries) => entries);
 }
 
-export function findCityByGeonameId(geonameId, options = {}) {
+export async function findCityByGeonameId(geonameId, options = {}) {
   const numericId = Number(geonameId);
   if (!Number.isInteger(numericId)) {
     return null;
@@ -46,10 +48,10 @@ export function findCityByGeonameId(geonameId, options = {}) {
 
   const countries = options.countryCode
     ? [normalizeCountryCode(options.countryCode)]
-    : Object.keys(loadCitiesManifest().countries);
+    : Object.keys((await loadCitiesManifest()).countries);
 
   for (const countryCode of countries) {
-    const city = listCitiesByCountry(countryCode).find((entry) => entry.geonameId === numericId);
+    const city = (await listCitiesByCountry(countryCode)).find((entry) => entry.geonameId === numericId);
     if (city) {
       return city;
     }

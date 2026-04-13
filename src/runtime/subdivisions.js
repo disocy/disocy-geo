@@ -5,31 +5,31 @@ import {
   normalizeSubdivisionCode,
 } from "./store.js";
 
-export function listSubdivisions(countryCode) {
+export async function listSubdivisions(countryCode) {
   const normalizedCountryCode = normalizeCountryCode(countryCode);
   if (!normalizedCountryCode) {
     return [];
   }
 
-  return [...loadSubdivisionsByCountry(normalizedCountryCode)];
+  return [...await loadSubdivisionsByCountry(normalizedCountryCode)];
 }
 
-export function getSubdivision(code) {
+export async function getSubdivision(code) {
   const normalizedCode = normalizeSubdivisionCode(code);
   if (!normalizedCode.includes("-")) {
     return null;
   }
 
   const [countryCode] = normalizedCode.split("-");
-  const subdivisions = listSubdivisions(countryCode);
+  const subdivisions = await listSubdivisions(countryCode);
   return subdivisions.find((subdivision) => subdivision.code === normalizedCode) ?? null;
 }
 
-export function hasSubdivision(code) {
-  return getSubdivision(code) !== null;
+export async function hasSubdivision(code) {
+  return (await getSubdivision(code)) !== null;
 }
 
-export function resolveSubdivisionKey(countryCode, subdivisionKeyOrCode) {
+export async function resolveSubdivisionKey(countryCode, subdivisionKeyOrCode) {
   const normalizedCountryCode = normalizeCountryCode(countryCode);
   const normalizedValue = normalizeSubdivisionCode(subdivisionKeyOrCode);
 
@@ -38,7 +38,7 @@ export function resolveSubdivisionKey(countryCode, subdivisionKeyOrCode) {
   }
 
   if (normalizedValue.includes("-")) {
-    const subdivision = getSubdivision(normalizedValue);
+    const subdivision = await getSubdivision(normalizedValue);
     if (!subdivision || subdivision.countryCode !== normalizedCountryCode) {
       return "";
     }

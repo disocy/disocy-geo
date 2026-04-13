@@ -1,149 +1,129 @@
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const DEFAULT_DIST_DIR = path.resolve(__dirname, "../../dist");
+const DATASET_BASE_URL = "https://disocy.github.io/disocy-geo";
 const cache = new Map();
-
-function resolveDistDir() {
-  const cwd = process.cwd();
-  const candidates = [
-    DEFAULT_DIST_DIR,
-    path.resolve(cwd, "lib", "@disocy", "geo", "dist"),
-    path.resolve(cwd, "..", "lib", "@disocy", "geo", "dist"),
-  ];
-
-  for (const candidate of candidates) {
-    if (existsSync(path.join(candidate, "core", "countries.json"))) {
-      return candidate;
-    }
-  }
-
-  return DEFAULT_DIST_DIR;
-}
-
-const DIST_DIR = resolveDistDir();
 
 function normalizeCode(value) {
   return typeof value === "string" ? value.trim().toUpperCase() : "";
 }
 
-function readJson(relativePath) {
-  const target = path.join(DIST_DIR, relativePath);
-  const cacheKey = target;
+function buildDatasetUrl(relativePath) {
+  return `${DATASET_BASE_URL.replace(/\/+$/, "")}/${relativePath.replace(/^\/+/, "")}`;
+}
+
+async function readJson(relativePath) {
+  const cacheKey = relativePath;
 
   if (cache.has(cacheKey)) {
     return cache.get(cacheKey);
   }
 
-  if (!existsSync(target)) {
-    throw new Error(`@disocy/geo dist artifact not found: ${relativePath}`);
-  }
+  const promise = (async () => {
+    const response = await fetch(buildDatasetUrl(relativePath), {
+      headers: {
+        "user-agent": "@disocy/geo runtime",
+        accept: "application/json",
+      },
+      cache: "force-cache",
+    });
 
-  const parsed = JSON.parse(readFileSync(target, "utf8"));
-  cache.set(cacheKey, parsed);
-  return parsed;
+    if (!response.ok) {
+      throw new Error(`@disocy/geo dist artifact not found: ${relativePath}`);
+    }
+
+    return response.json();
+  })();
+
+  cache.set(cacheKey, promise);
+  return promise;
 }
 
-function readJsonOptional(relativePath, fallbackValue) {
-  const target = path.join(DIST_DIR, relativePath);
-  if (!existsSync(target)) {
+async function readJsonOptional(relativePath, fallbackValue) {
+  try {
+    return await readJson(relativePath);
+  } catch {
     return fallbackValue;
   }
-
-  return readJson(relativePath);
 }
 
-export function loadCountries() {
-  return readJson(path.join("core", "countries.json"));
+export function getDatasetBaseUrl() {
+  return DATASET_BASE_URL;
 }
 
-export function loadSubdivisionsByCountry(countryCode) {
+export async function loadCountries() {
+  return readJson("core/countries.json");
+}
+
+export async function loadSubdivisionsByCountry(countryCode) {
   const normalizedCountryCode = normalizeCode(countryCode);
   if (!normalizedCountryCode) {
     return [];
   }
 
-  return readJsonOptional(path.join("core", "subdivisions-by-country", `${normalizedCountryCode}.json`), []);
+  return readJsonOptional(`core/subdivisions-by-country/${normalizedCountryCode}.json`, []);
 }
 
-export function loadCitiesManifest() {
-  return readJson(path.join("core", "localities", "manifest.json"));
+export async function loadCitiesManifest() {
+  return readJson("core/localities/manifest.json");
 }
 
-export function loadCountryOperationalMetadata(countryCode) {
+export async function loadCountryOperationalMetadata(countryCode) {
   const normalizedCountryCode = normalizeCode(countryCode);
   if (!normalizedCountryCode) {
     return null;
   }
 
-  return readJsonOptional(path.join("addressing", "country-operational", `${normalizedCountryCode}.json`), null);
+  return readJsonOptional(`addressing/country-operational/${normalizedCountryCode}.json`, null);
 }
 
-export function loadAdministrativeDivisionMetadata(countryCode) {
+export async function loadAdministrativeDivisionMetadata(countryCode) {
   const normalizedCountryCode = normalizeCode(countryCode);
   if (!normalizedCountryCode) {
     return null;
   }
 
-  return readJsonOptional(path.join("addressing", "administrative-divisions", `${normalizedCountryCode}.json`), null);
+  return readJsonOptional(`addressing/administrative-divisions/${normalizedCountryCode}.json`, null);
 }
 
-export function loadPostalCodesByCountry(countryCode) {
+export async function loadPostalCodesByCountry(countryCode) {
   const normalizedCountryCode = normalizeCode(countryCode);
   if (!normalizedCountryCode) {
     return [];
   }
 
-  return readJsonOptional(path.join("addressing", "postal-codes", `${normalizedCountryCode}.json`), []);
+  return readJsonOptional(`addressing/postal-codes/${normalizedCountryCode}.json`, []);
 }
 
-export function loadCustomsMetadata(countryCode) {
+export async function loadCustomsMetadata(countryCode) {
   const normalizedCountryCode = normalizeCode(countryCode);
   if (!normalizedCountryCode) {
     return null;
   }
 
-  return readJsonOptional(path.join("compliance", "customs", `${normalizedCountryCode}.json`), null);
+  return readJsonOptional(`compliance/customs/${normalizedCountryCode}.json`, null);
 }
 
-export function loadTradeRegionMetadata(countryCode) {
+export async function loadTradeRegionMetadata(countryCode) {
   const normalizedCountryCode = normalizeCode(countryCode);
   if (!normalizedCountryCode) {
     return null;
   }
 
-  return readJsonOptional(path.join("compliance", "trade-regions", `${normalizedCountryCode}.json`), null);
+  return readJsonOptional(`compliance/trade-regions/${normalizedCountryCode}.json`, null);
 }
 
-export function loadCountryMetadata(countryCode) {
+export async function loadCountryMetadata(countryCode) {
   const normalizedCountryCode = normalizeCode(countryCode);
   if (!normalizedCountryCode) {
     return null;
   }
 
-  return readJsonOptional(path.join("metadata", "countries", `${normalizedCountryCode}.json`), null);
+  return readJsonOptional(`metadata/countries/${normalizedCountryCode}.json`, null);
 }
 
-export function listCountryShardCodes(relativeDir) {
-  const targetDir = path.join(DIST_DIR, relativeDir);
-  if (!existsSync(targetDir)) {
-    return [];
-  }
-
-  return readdirSync(targetDir)
-    .filter((entry) => entry.endsWith(".json"))
-    .map((entry) => entry.replace(/\.json$/i, ""))
-    .sort();
-}
-
-export function loadCityShard(countryCode, subdivisionKey) {
+export async function loadCityShard(countryCode, subdivisionKey) {
   const normalizedCountryCode = normalizeCode(countryCode);
   const normalizedSubdivisionKey = normalizeCode(subdivisionKey);
   return readJson(
-    path.join("core", "localities", "by-country-state", normalizedCountryCode, `${normalizedSubdivisionKey}.json`),
+    `core/localities/by-country-state/${normalizedCountryCode}/${normalizedSubdivisionKey}.json`,
   );
 }
 

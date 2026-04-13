@@ -8,9 +8,9 @@
  * - Subdivisions (ISO 3166-2-style records)
  * - City shards (GeoNames-style records)
  *
- * The runtime reads generated JSON artifacts from `dist/`, while
- * the build pipeline compiles those artifacts from source snapshots
- * under `src/sources/*`.
+ * The runtime fetches generated JSON artifacts from the published
+ * dataset URL, while the build pipeline compiles those artifacts from
+ * source snapshots under `src/sources/*`.
  *
  * @author Aaron Retamero <aaron@disocy.com>
  * @copyright 2026 Disocy. All rights reserved.

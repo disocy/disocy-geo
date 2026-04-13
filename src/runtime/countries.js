@@ -1,18 +1,19 @@
 import { loadCountries, normalizeCountryCode } from "./store.js";
 
-export function listCountries() {
-  return [...loadCountries()];
+export async function listCountries() {
+  return [...await loadCountries()];
 }
 
-export function getCountry(code) {
+export async function getCountry(code) {
   const normalizedCode = normalizeCountryCode(code);
   if (!normalizedCode) {
     return null;
   }
 
-  return loadCountries().find((country) => country.code === normalizedCode) ?? null;
+  const countries = await loadCountries();
+  return countries.find((country) => country.code === normalizedCode) ?? null;
 }
 
-export function hasCountry(code) {
-  return getCountry(code) !== null;
+export async function hasCountry(code) {
+  return (await getCountry(code)) !== null;
 }

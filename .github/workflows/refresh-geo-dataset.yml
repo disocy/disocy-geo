@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
 
 jobs:
   refresh:
@@ -25,6 +27,9 @@ jobs:
         uses: pnpm/action-setup@v4
         with:
           version: 10
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Install
         run: pnpm install --no-frozen-lockfile
@@ -45,9 +50,9 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         run: pnpm run populate:data
 
-      - name: Pack dist
+      - name: Prepare Pages artifact
         if: steps.check.outputs.changed == 'true'
-        run: tar -czf geo-dist.tar.gz dist
+        run: touch dist/.nojekyll
 
       - name: Save source cache metadata
         if: steps.check.outputs.changed == 'true'
@@ -61,11 +66,20 @@ jobs:
         id: tag
         run: echo "tag=geo-$(date +'%Y.%m.%d-%H%M')" >> "$GITHUB_OUTPUT"
 
-      - name: Publish release
+      - name: Publish release metadata
         if: steps.check.outputs.changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
           name: ${{ steps.tag.outputs.tag }}
-          files: geo-dist.tar.gz
           generate_release_notes: true
+
+      - name: Upload Pages artifact
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      - name: Deploy to GitHub Pages
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/deploy-pages@v4

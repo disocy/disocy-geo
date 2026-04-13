@@ -3,13 +3,14 @@ import { loadCountryOperationalMetadata, normalizeCountryCode } from "../runtime
 
 export { getShippingProfile } from "../runtime/enrich.js";
 
-export function getCountryOperationalMetadata(countryCode) {
+export async function getCountryOperationalMetadata(countryCode) {
   const normalizedCountryCode = normalizeCountryCode(countryCode);
   if (!normalizedCountryCode) {
     return null;
   }
 
-  const metadata = loadCountryOperationalMetadata(normalizedCountryCode) ?? getShippingProfile(normalizedCountryCode);
+  const metadata =
+    (await loadCountryOperationalMetadata(normalizedCountryCode)) ?? (await getShippingProfile(normalizedCountryCode));
   return metadata
     ? {
         countryCode: normalizedCountryCode,
