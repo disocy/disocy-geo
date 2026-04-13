@@ -116,13 +116,7 @@ It:
 
 ### Consumer URL
 
-The package can consume the latest prebuilt dataset through:
-
-```bash
-DISOCY_GEO_DIST_ARCHIVE_URL=https://github.com/disocy/disocy-geo/releases/latest/download/geo-dist.tar.gz
-```
-
-Then the package CLI can restore `dist/` on demand:
+The package CLI restores `dist/` from the latest GitHub release asset on demand:
 
 ```bash
 pnpm exec disocy-geo ensure

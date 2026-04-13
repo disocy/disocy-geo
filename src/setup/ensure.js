@@ -60,7 +60,7 @@ export function getGeoDistDir() {
 }
 
 export function getDefaultGeoDistArchiveUrl() {
-  return process.env.DISOCY_GEO_DIST_ARCHIVE_URL?.trim() || DEFAULT_ARCHIVE_URL;
+  return DEFAULT_ARCHIVE_URL;
 }
 
 export async function ensureGeoDataset(options = {}) {
