@@ -38,8 +38,8 @@ lib/@disocy/geo/
     populate/
     build/
     scripts/
-    sources/
-  dist/
+    sources/ (ignored, normalized backups)
+  dist/ (ignored, deployed to GitHub Pages)
     core/
       countries.json
       subdivisions-by-country/
@@ -422,7 +422,6 @@ If no external shipping payload is provided, shipping metadata is derived from c
 
 ## Current Notes
 
-- Runtime is file-backed and intended for server-side / Node.js usage.
-- `dist/` is a generated artifact and should stay committed with the package.
-- `src/sources/*` is the normalized source layer for rebuilds.
+- Runtime fetches shards via HTTPS natively, meaning it is Edge, Serverless (Vercel), and Browser compatible without relying on local disks.
+- `dist/` and `src/sources/*` are ignored in git and published exclusively to GitHub Pages to prevent blowing past Vercel payload limits or bloating the NPM package with hundreds of megabytes of JSON.
 - Large locality imports are handled through shard-oriented processing to avoid giant in-memory JSON objects.
