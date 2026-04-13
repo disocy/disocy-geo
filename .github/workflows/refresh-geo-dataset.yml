@@ -1,0 +1,71 @@
+name: Refresh Geo Dataset
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "15 3 * * *"
+
+permissions:
+  contents: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Restore source cache metadata
+        uses: actions/cache@v4
+        with:
+          path: .cache/geo
+          key: geo-source-meta-${{ runner.os }}
+          restore-keys: |
+            geo-source-meta-
+
+      - name: Check upstream changes
+        id: check
+        run: node .github/scripts/check-geo-sources.mjs
+
+      - name: Populate dataset
+        if: steps.check.outputs.changed == 'true'
+        run: pnpm run populate:data
+
+      - name: Pack dist
+        if: steps.check.outputs.changed == 'true'
+        run: tar -czf geo-dist.tar.gz dist
+
+      - name: Save source cache metadata
+        if: steps.check.outputs.changed == 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache/geo
+          key: geo-source-meta-${{ runner.os }}-${{ github.run_id }}
+
+      - name: Create release tag
+        if: steps.check.outputs.changed == 'true'
+        id: tag
+        run: echo "tag=geo-$(date +'%Y.%m.%d-%H%M')" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        if: steps.check.outputs.changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: ${{ steps.tag.outputs.tag }}
+          files: geo-dist.tar.gz
+          generate_release_notes: true
