@@ -1,5 +1,4 @@
 import { populateGeoSources } from "../populate/index.js";
-import { buildGeoDataset } from "../build/index.js";
 
 const COLORS = {
   reset: "\x1b[0m",
@@ -95,7 +94,7 @@ try {
   const result = await populateGeoSources({
     onProgress: renderProgress,
   });
-  const buildSummary = buildGeoDataset();
+  const { buildSummary } = result;
   const elapsedMs = Date.now() - startedAt;
 
   printLine();
@@ -107,9 +106,10 @@ try {
   printLine(`  ISO subdivisions: ${result.manifest.sources.isoSubdivisions.recordCount}`);
   printLine(`  Cities: ${result.manifest.sources.geonamesCities.recordCount}`);
   printLine(`  Shipping profiles: ${result.manifest.sources.shippingProfiles.recordCount}`);
-  printLine(`  Dist countries: ${buildSummary.countries}`);
-  printLine(`  Dist subdivision countries: ${buildSummary.subdivisionCountries}`);
-  printLine(`  Dist city countries: ${buildSummary.cityCountries}`);
+  printLine(`  Dist countries: ${buildSummary?.countries ?? "—"}`);
+  printLine(`  Dist subdivision countries: ${buildSummary?.subdivisionCountries ?? "—"}`);
+  printLine(`  Dist city countries: ${buildSummary?.cityCountries ?? "—"}`);
+
 } catch (error) {
   printLine();
   printLine(`${color("red", "✖")} Populate failed`);

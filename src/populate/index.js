@@ -561,6 +561,7 @@ export async function populateGeoSources(options = {}) {
   const onProgress = options.onProgress;
   let geonamesCitiesPayload = null;
   let geonamesPostalCodesPayload = null;
+  let buildSummary = null;
 
   reportProgress(onProgress, {
     type: "pipeline-start",
@@ -722,7 +723,7 @@ export async function populateGeoSources(options = {}) {
       reportProgress(onProgress, {
         type: "build-start",
       });
-      const buildSummary = buildGeoDataset(normalized);
+      buildSummary = buildGeoDataset(normalized);
       reportProgress(onProgress, {
         type: "build-complete",
         summary: buildSummary,
@@ -741,6 +742,7 @@ export async function populateGeoSources(options = {}) {
     return {
       manifest,
       normalized,
+      buildSummary,
     };
   } finally {
     if (geonamesCitiesPayload?.kind === "city-shard-store" && geonamesCitiesPayload.cleanupDir) {
