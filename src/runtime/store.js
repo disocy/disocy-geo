@@ -17,19 +17,23 @@ async function readJson(relativePath) {
   }
 
   const promise = (async () => {
-    const response = await fetch(buildDatasetUrl(relativePath), {
-      headers: {
-        "user-agent": "@disocy/geo runtime",
-        accept: "application/json",
-      },
-      cache: "force-cache",
-    });
+    try {
+      const response = await fetch(buildDatasetUrl(relativePath), {
+        headers: {
+          "user-agent": "@disocy/geo runtime",
+          accept: "application/json",
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`@disocy/geo dist artifact not found: ${relativePath}`);
+      if (!response.ok) {
+        throw new Error(`@disocy/geo dist artifact not found: ${relativePath}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      cache.delete(cacheKey);
+      throw error;
     }
-
-    return response.json();
   })();
 
   cache.set(cacheKey, promise);
