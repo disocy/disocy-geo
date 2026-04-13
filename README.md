@@ -348,7 +348,7 @@ The search layer currently supports:
 Run the full ingestion pipeline:
 
 ```bash
-pnpm --dir lib/@disocy/geo run populate:data
+pnpm run populate:data
 ```
 
 The populate pipeline:
@@ -357,7 +357,7 @@ The populate pipeline:
 2. Normalizes country, subdivision, locality, and operational metadata
 3. Rebuilds the domain-oriented `dist/`
 
-Supported environment variables:
+Optional source override variables for maintainers:
 
 ```bash
 DISOCY_GEO_UN_M49_URL=
@@ -365,13 +365,17 @@ DISOCY_GEO_ISO_COUNTRIES_URL=
 DISOCY_GEO_ISO_SUBDIVISIONS_URL=
 DISOCY_GEO_ADMIN2_SUBDIVISIONS_URL=
 DISOCY_GEO_GEONAMES_CITIES_URL=
+DISOCY_GEO_GEONAMES_POSTAL_CODES_URL=
+DISOCY_GEO_GEONAMES_ALTERNATE_NAMES_BASE_URL=
 DISOCY_GEO_SHIPPING_URL=
 ```
+
+These are only intended for source maintenance, mirrors, or debugging the ingest pipeline. Consumer apps do not need to set any geo-specific environment variables.
 
 ## Build Dist From Existing Source Snapshots
 
 ```bash
-pnpm --dir lib/@disocy/geo run build:data
+pnpm run build:data
 ```
 
 This rebuilds `dist/` from the normalized snapshots under `src/sources/*`.
@@ -379,7 +383,7 @@ This rebuilds `dist/` from the normalized snapshots under `src/sources/*`.
 ## Test
 
 ```bash
-pnpm --dir lib/@disocy/geo test
+pnpm test
 ```
 
 ## Source Inputs
