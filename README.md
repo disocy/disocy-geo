@@ -89,6 +89,53 @@ The generated `dist/` is organized by domain and country shard to minimize runti
 
 This keeps runtime reads narrow and predictable instead of loading giant global JSON blobs.
 
+## GitHub As Dataset API
+
+This repository is designed to keep code in Git while treating GitHub Releases as the transport layer for the generated dataset.
+
+The intended flow is:
+
+1. GitHub Actions checks upstream GeoNames and UN sources every day.
+2. If upstream changed, the workflow runs `populate:data`.
+3. The workflow packs `dist/` as `geo-dist.tar.gz`.
+4. The workflow publishes that archive as a GitHub Release asset.
+5. Consumer apps can let the library fetch the latest archive automatically.
+
+This avoids committing multi-gigabyte generated artifacts into Git while still making the dataset easy to consume from CI, local development, or deployments.
+
+### Daily Refresh Workflow
+
+The workflow lives in `.github/workflows/refresh-geo-dataset.yml`.
+
+It:
+
+- runs daily on a cron schedule
+- checks upstream headers through `.github/scripts/check-geo-sources.mjs`
+- skips the expensive rebuild when sources did not change
+- publishes a fresh `geo-dist.tar.gz` release asset when they did
+
+### Consumer URL
+
+The package can consume the latest prebuilt dataset through:
+
+```bash
+DISOCY_GEO_DIST_ARCHIVE_URL=https://github.com/disocy/disocy-geo/releases/latest/download/geo-dist.tar.gz
+```
+
+Then the package CLI can restore `dist/` on demand:
+
+```bash
+pnpm exec disocy-geo ensure
+```
+
+Or from code:
+
+```js
+import { ensureGeoDataset } from "@disocy/geo/setup";
+
+await ensureGeoDataset();
+```
+
 ## Public API
 
 ### Root
