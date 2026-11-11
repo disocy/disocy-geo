@@ -60,27 +60,27 @@ jobs:
           fi
 
       - name: Populate dataset
-        if: steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
         run: pnpm run populate:data
 
       - name: Prepare Pages artifact
-        if: steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
         run: touch dist/.nojekyll
 
       - name: Save source cache metadata
-        if: steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
         uses: actions/cache/save@v4
         with:
           path: .cache/geo
           key: geo-source-meta-${{ runner.os }}-${{ github.run_id }}
 
       - name: Create release tag
-        if: steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
         id: tag
         run: echo "tag=geo-$(date +'%Y.%m.%d-%H%M')" >> "$GITHUB_OUTPUT"
 
       - name: Publish release metadata
-        if: steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.tag.outputs.tag }}
@@ -88,11 +88,11 @@ jobs:
           generate_release_notes: true
 
       - name: Upload Pages artifact
-        if: steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
 
       - name: Deploy to GitHub Pages
-        if: steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
+        if: github.event_name == 'workflow_dispatch' || steps.check.outputs.changed == 'true' || steps.pages.outputs.pages_down == 'true'
         uses: actions/deploy-pages@v4

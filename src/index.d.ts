@@ -81,10 +81,43 @@ export interface CountryOperationalMetadata extends ShippingProfile {
     countryCode: CountryCode;
 }
 
+/**
+ * What a country's postal address calls its subdivision line: libaddressinput `state_name_type`,
+ * `province` when the country does not name it.
+ */
+export type PostalSubdivisionType =
+    | "area"
+    | "county"
+    | "department"
+    | "district"
+    | "do_si"
+    | "emirate"
+    | "island"
+    | "oblast"
+    | "parish"
+    | "prefecture"
+    | "province"
+    | "state";
+
+/** The subdivision line of a postal address, from Google libaddressinput (chromium-i18n). */
 export interface AdministrativeDivisionMetadata {
     countryCode: CountryCode;
+    /** Level whose units the postal address names: admin2 for the provinces of Spain and Italy. */
     preferredSubdivisionLevel: "admin1" | "admin2";
-    primarySubdivisionType: string;
+    primarySubdivisionType: PostalSubdivisionType;
+    /** The postal address carries a subdivision line at all (`%S` in the format). */
+    usesSubdivision: boolean;
+    /** The postal address is incomplete without it (`S` in `require`). */
+    requiresSubdivision: boolean;
+}
+
+export interface AddressFormatRecord {
+    countryCode: CountryCode;
+    usesSubdivision: boolean;
+    requiresSubdivision: boolean;
+    subdivisionType: PostalSubdivisionType;
+    subdivisionCount: number;
+    subdivisionIds: string[];
 }
 
 export interface CustomsMetadata {

@@ -619,7 +619,11 @@ export function normalizeShippingProfilesPayload(payload) {
   }, {});
 }
 
-export function deriveShippingProfiles(records, subdivisionsByCountry = {}) {
+/**
+ * A subdivision is required for shipping only where the country's postal address requires it
+ * (libaddressinput `require`), never just because the country has administrative divisions.
+ */
+export function deriveShippingProfiles(records, addressFormats = {}) {
   if (!Array.isArray(records)) {
     return {};
   }
@@ -630,17 +634,13 @@ export function deriveShippingProfiles(records, subdivisionsByCountry = {}) {
       return accumulator;
     }
 
-    const subdivisionCount = Array.isArray(subdivisionsByCountry[countryCode])
-      ? subdivisionsByCountry[countryCode].length
-      : 0;
-
     accumulator[countryCode] = {
       customsRegion: "",
       locodeCountryCode: countryCode,
       phonePrefix: cleanString(record.phonePrefix),
       postalCodeFormat: cleanString(record.postalCodeFormat),
       postalCodeRegex: cleanString(record.postalCodeRegex),
-      requiresSubdivisionForShipping: subdivisionCount > 0,
+      requiresSubdivisionForShipping: addressFormats[countryCode]?.requiresSubdivision === true,
     };
 
     return accumulator;

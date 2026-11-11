@@ -7,6 +7,12 @@ function toDataUrl(contentType, value) {
   return `data:${contentType};charset=utf-8,${encodeURIComponent(value)}`;
 }
 
+// Trimmed libaddressinput records, so the tests never reach the network.
+const addressFormats = toDataUrl("application/json", JSON.stringify({
+  ES: { key: "ES", fmt: "%N%n%O%n%A%n%Z %C %S", require: "ACSZ", sub_keys: "M~B" },
+  US: { key: "US", fmt: "%N%n%O%n%A%n%C, %S %Z", require: "ACSZ", state_name_type: "state", sub_keys: "CA~NY" },
+}));
+
 test("populate API normalizes remote payloads in dry-run mode", async () => {
   const unM49 = JSON.stringify([
     {
@@ -54,6 +60,7 @@ test("populate API normalizes remote payloads in dry-run mode", async () => {
       geonamesCities: toDataUrl("text/tab-separated-values", geonames),
       geonamesPostalCodes: toDataUrl("text/tab-separated-values", ""),
       shippingProfiles: toDataUrl("application/json", shipping),
+      addressFormats,
     },
   });
 
@@ -76,9 +83,11 @@ test("populate API allows shipping profiles to be omitted", async () => {
       admin2Subdivisions: toDataUrl("text/tab-separated-values", ""),
       geonamesCities: toDataUrl("text/tab-separated-values", "5368361\tLos Angeles\tLos Angeles\tLos Angeles\t34.05223\t-118.24368\tP\tPPLA\tUS\t\tCA\t037\t\t\t3898747\t0\t0\tAmerica/Los_Angeles\t2024-01-01"),
       geonamesPostalCodes: toDataUrl("text/tab-separated-values", ""),
+      addressFormats,
     },
   });
 
+  assert.equal(result.normalized.addressFormats.US.subdivisionType, "state");
   assert.equal(result.normalized.shippingProfiles.US.locodeCountryCode, "US");
   assert.equal(result.normalized.shippingProfiles.US.requiresSubdivisionForShipping, true);
 });
@@ -98,6 +107,7 @@ test("populate API derives phone prefix and postal format from geonames country 
       admin2Subdivisions: toDataUrl("text/tab-separated-values", ""),
       geonamesCities: toDataUrl("text/tab-separated-values", "3117735\tMadrid\tMadrid\tMadrid\t40.4165\t-3.70256\tP\tPPLC\tES\t\tMD\tM\t\t\t3255944\t667\t655\tEurope/Madrid\t2024-01-01"),
       geonamesPostalCodes: toDataUrl("text/tab-separated-values", ""),
+      addressFormats,
     },
   });
 

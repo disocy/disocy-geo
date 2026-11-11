@@ -4,6 +4,10 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  ADDRESS_FORMATS_SOURCE_URL,
+  normalizeAddressFormatsPayload,
+} from "../addressing/address-formats.js";
 import { buildGeoDataset } from "../build/index.js";
 import {
   deriveShippingProfiles,
@@ -34,7 +38,10 @@ const DEFAULT_SOURCE_URLS = Object.freeze({
   geonamesAlternateNamesBaseUrl:
     process.env.DISOCY_GEO_GEONAMES_ALTERNATE_NAMES_BASE_URL ?? "https://download.geonames.org/export/dump/alternatenames",
   shippingProfiles: process.env.DISOCY_GEO_SHIPPING_URL ?? "",
+  addressFormats: process.env.DISOCY_GEO_ADDRESS_FORMATS_URL ?? ADDRESS_FORMATS_SOURCE_URL,
 });
+
+const ADDRESS_FORMAT_FETCH_CONCURRENCY = 16;
 
 function ensureDir(target) {
   mkdirSync(target, { recursive: true });
@@ -434,6 +441,31 @@ function resolveShippingProfilesPayload(url) {
   return Promise.resolve("{}");
 }
 
+/**
+ * libaddressinput serves an index (`{ countries: "AC~AD~…" }`) and one record per country at
+ * `{url}/{COUNTRY}`. A payload that is already a `{ COUNTRY: record }` map is used as it is.
+ */
+async function resolveAddressFormatsPayload(url) {
+  const index = JSON.parse(await fetchText(url));
+  if (typeof index?.countries !== "string") {
+    return index;
+  }
+
+  const countryCodes = index.countries.split("~").filter(Boolean);
+  const records = {};
+  for (let offset = 0; offset < countryCodes.length; offset += ADDRESS_FORMAT_FETCH_CONCURRENCY) {
+    const batch = countryCodes.slice(offset, offset + ADDRESS_FORMAT_FETCH_CONCURRENCY);
+    const payloads = await Promise.all(
+      batch.map((countryCode) => fetchText(`${String(url).replace(/\/+$/, "")}/${countryCode}`)),
+    );
+    payloads.forEach((payload, position) => {
+      records[batch[position]] = JSON.parse(payload);
+    });
+  }
+
+  return records;
+}
+
 function resolveCitiesPayload(url) {
   if (looksLikeZipUrl(url)) {
     return fetchBinary(url).then(extractAndNormalizeCitiesFromZip);
@@ -541,20 +573,6 @@ async function loadSource(config, onProgress) {
   }
 }
 
-function groupSubdivisionsByCountry(records) {
-  return records.reduce((accumulator, record) => {
-    const countryCode = record?.countryCode;
-    if (!countryCode) {
-      return accumulator;
-    }
-
-    const bucket = accumulator[countryCode] ?? [];
-    bucket.push(record);
-    accumulator[countryCode] = bucket;
-    return accumulator;
-  }, {});
-}
-
 export async function populateGeoSources(options = {}) {
   const sourceUrls = resolveSourceUrls(options.sourceUrls);
   const dryRun = options.dryRun === true;
@@ -611,6 +629,12 @@ export async function populateGeoSources(options = {}) {
       fetcher: () => resolveShippingProfilesPayload(sourceUrls.shippingProfiles),
     }, onProgress);
 
+    const addressFormatsPayload = await loadSource({
+      key: "addressFormats",
+      label: "libaddressinput address formats",
+      fetcher: () => resolveAddressFormatsPayload(sourceUrls.addressFormats),
+    }, onProgress);
+
     reportProgress(onProgress, {
       type: "normalize-start",
     });
@@ -624,9 +648,9 @@ export async function populateGeoSources(options = {}) {
       label: "GeoNames subdivision alternate names",
       fetcher: () => resolveSubdivisionAlternateNamesPayload(sourceUrls.geonamesAlternateNamesBaseUrl, normalizedSubdivisions),
     }, onProgress);
-    const subdivisionsByCountry = groupSubdivisionsByCountry(normalizedSubdivisions);
     const explicitShippingProfiles = normalizeShippingProfilesPayload(shippingProfilesPayload);
-    const derivedShippingProfiles = deriveShippingProfiles(normalizedIsoCountries, subdivisionsByCountry);
+    const addressFormats = normalizeAddressFormatsPayload(addressFormatsPayload);
+    const derivedShippingProfiles = deriveShippingProfiles(normalizedIsoCountries, addressFormats);
     const normalizedGeonamesCities = Array.isArray(geonamesCitiesPayload)
       ? geonamesCitiesPayload
       : geonamesCitiesPayload?.kind === "city-shard-store"
@@ -650,6 +674,7 @@ export async function populateGeoSources(options = {}) {
       geonamesPostalCodes: normalizedGeonamesPostalCodes,
       subdivisionAlternateNames,
       shippingProfiles: Object.keys(explicitShippingProfiles).length > 0 ? explicitShippingProfiles : derivedShippingProfiles,
+      addressFormats,
       admin1OfficialNames,
     };
     reportProgress(onProgress, {
@@ -666,6 +691,7 @@ export async function populateGeoSources(options = {}) {
           : normalized.geonamesPostalCodes.recordCount,
         subdivisionAlternateNames: normalized.subdivisionAlternateNames.length,
         shippingProfiles: Object.keys(normalized.shippingProfiles).length,
+        addressFormats: Object.keys(normalized.addressFormats).length,
       },
     });
 
@@ -689,6 +715,7 @@ export async function populateGeoSources(options = {}) {
           sourceUrls.shippingProfiles || `${sourceUrls.isoCountries} (derived)`,
           normalized.shippingProfiles,
         ),
+        addressFormats: createManifestEntry(sourceUrls.addressFormats, normalized.addressFormats),
       },
     };
 
@@ -701,6 +728,7 @@ export async function populateGeoSources(options = {}) {
       ensureDir(path.join(SOURCES_DIR, "iso-3166-2"));
       ensureDir(path.join(SOURCES_DIR, "geonames"));
       ensureDir(path.join(SOURCES_DIR, "disocy"));
+      ensureDir(path.join(SOURCES_DIR, "libaddressinput"));
 
       writeJson(path.join(SOURCES_DIR, "geonames", "admin1-official-names.json"), normalized.admin1OfficialNames);
       writeJson(
@@ -718,6 +746,7 @@ export async function populateGeoSources(options = {}) {
       writeJson(path.join(SOURCES_DIR, "iso-3166", "countries.json"), normalized.isoCountries);
       writeJson(path.join(SOURCES_DIR, "iso-3166-2", "subdivisions.json"), normalized.isoSubdivisions);
       writeJson(path.join(SOURCES_DIR, "disocy", "shipping.json"), normalized.shippingProfiles);
+      writeJson(path.join(SOURCES_DIR, "libaddressinput", "address-formats.json"), normalized.addressFormats);
       writeJson(path.join(SOURCES_DIR, "source-manifest.json"), manifest);
 
       reportProgress(onProgress, {

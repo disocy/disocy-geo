@@ -2,6 +2,8 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { buildAdministrativeDivisionRecord } from "../addressing/address-formats.js";
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
@@ -329,45 +331,6 @@ function resolveSubdivisionLabels(record, options) {
     displayName,
     nativeName,
   };
-}
-
-function inferAdministrativeDivisionType(subdivisions) {
-  const normalizedSubdivisionLabels = subdivisions.map((record) => (
-    [record.name, record.nativeName, record.displayName, ...(record.searchKeywords ?? [])]
-      .filter((value) => typeof value === "string" && value.trim().length > 0)
-      .map((value) => normalizeLookupLabel(value))
-  ));
-
-  const scores = new Map();
-  const registerMatch = (label, pattern) => {
-    const score = normalizedSubdivisionLabels.reduce(
-      (count, labels) => count + (labels.some((value) => pattern.test(value)) ? 1 : 0),
-      0,
-    );
-    if (score > 0) {
-      scores.set(label, score);
-    }
-  };
-
-  registerMatch("prefecture", /\b(prefecture|ken|to|fu|do)\b/);
-  registerMatch("province", /\b(province|provincia|província)\b/);
-  registerMatch("state", /\b(state|estado)\b/);
-  registerMatch("region", /\b(region|regio|region de|región|région)\b/);
-  registerMatch("county", /\b(county|comte|comtat|kreis)\b/);
-  registerMatch("department", /\b(department|departamento|departement|département)\b/);
-  registerMatch("emirate", /\b(emirate|emirato)\b/);
-  registerMatch("parish", /\b(parish|parroquia)\b/);
-  registerMatch("canton", /\b(canton|canto|cantó|kanton)\b/);
-  registerMatch("district", /\b(district|distrito|districte|bezirk)\b/);
-  registerMatch("voivodeship", /\b(voivodeship|wojewodztwo|województwo)\b/);
-  registerMatch("oblast", /\b(oblast)\b/);
-
-  const winner = [...scores.entries()].sort((left, right) => right[1] - left[1])[0];
-  if (winner && winner[1] >= 2) {
-    return winner[0];
-  }
-
-  return "subdivision";
 }
 
 function buildPostalSubdivisionNativeHints(postalCodesByCountry) {
@@ -841,24 +804,18 @@ function buildCountryOperationalMetadata(input = {}) {
   );
 }
 
+function buildAddressFormats(input = {}) {
+  return input.addressFormats ?? readJsonOptional(path.join("libaddressinput", "address-formats.json"), {});
+}
+
 function buildAdministrativeDivisionMetadata(input = {}) {
   const subdivisionsByCountry = buildSubdivisions(input);
+  const addressFormats = buildAddressFormats(input);
   return Object.fromEntries(
-    Object.entries(subdivisionsByCountry).map(([countryCode, subdivisions]) => {
-      const admin1 = subdivisions.filter((record) => record.type === "admin1");
-      const admin2 = subdivisions.filter((record) => record.type === "admin2");
-      const preferredSubdivisionLevel = admin1.length > 0 ? "admin1" : "admin2";
-      const primarySubdivisions = preferredSubdivisionLevel === "admin1" ? admin1 : admin2;
-
-      return [
+    Object.entries(subdivisionsByCountry).map(([countryCode, subdivisions]) => [
       countryCode,
-      {
-        countryCode,
-        preferredSubdivisionLevel,
-        primarySubdivisionType: inferAdministrativeDivisionType(primarySubdivisions),
-      },
-    ];
-    }),
+      buildAdministrativeDivisionRecord(countryCode, subdivisions, addressFormats[countryCode]),
+    ]),
   );
 }
 

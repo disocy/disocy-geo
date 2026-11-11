@@ -80,6 +80,9 @@ The generated `dist/` is organized by domain and country shard to minimize runti
   Loads one locality shard at a time.
 - `dist/addressing/country-operational/{COUNTRY}.json`
   Addressing and shipping metadata for one country.
+- `dist/addressing/administrative-divisions/{COUNTRY}.json`
+  The subdivision line of the country's postal address: whether it is used and required, what it is
+  called and which administrative level it names.
 - `dist/compliance/customs/{COUNTRY}.json`
   Customs-focused compliance slice.
 - `dist/compliance/trade-regions/{COUNTRY}.json`
@@ -112,6 +115,7 @@ It:
 - runs daily on a cron schedule
 - checks upstream headers through `.github/scripts/check-geo-sources.mjs`
 - skips the expensive rebuild when sources did not change
+- always rebuilds when run by hand (`workflow_dispatch`), so a code change reaches Pages without waiting for an upstream change
 - deploys the refreshed `dist/` to GitHub Pages when they did
 
 ### Runtime Base URL
@@ -272,6 +276,21 @@ Country operational metadata includes:
 - `postalCodeRegex`
 - `requiresSubdivisionForShipping`
 
+### Postal Subdivision
+
+`getAdministrativeDivisionMetadata(countryCode)` describes the subdivision line of a postal address,
+taken from Google libaddressinput (the chromium-i18n address metadata behind Chrome and Android autofill):
+
+- `usesSubdivision`: the address format carries it (`%S` in `fmt`). False for France, Germany, the United
+  Kingdom, Greece or Portugal, where postal code and city are enough, so a form hides the field.
+- `requiresSubdivision`: the address is incomplete without it (`S` in `require`). It also sets
+  `requiresSubdivisionForShipping`.
+- `primarySubdivisionType`: what the country calls it (`state_name_type`): `province` for Spain, Italy or
+  Canada, `state` for the United States, Mexico or Brazil, `prefecture` for Japan, `county` for Ireland.
+- `preferredSubdivisionLevel`: the level whose units the address names. Spain and Italy name the province
+  (admin2), not the autonomous community or the region (admin1); in Spain the first two digits of the
+  postal code give it.
+
 ## Usage Examples
 
 ### Country + Subdivisions
@@ -415,10 +434,13 @@ Current upstream model:
   Secondary subdivision catalog
 - `GeoNames allCountries.zip`
   Localities, coordinates, population, admin hierarchy, timezone
+- `Google libaddressinput` (`https://chromium-i18n.appspot.com/ssl-address/data`)
+  Postal address format per country: whether the subdivision line is used and required, and its name
 - optional curated shipping input
   Explicit overrides for operational metadata when needed
 
-If no external shipping payload is provided, shipping metadata is derived from country metadata plus subdivision presence.
+If no external shipping payload is provided, shipping metadata is derived from country metadata, and a
+subdivision is required for shipping only where libaddressinput requires it.
 
 ## Current Notes
 
