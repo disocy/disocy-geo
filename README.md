@@ -245,8 +245,19 @@ Subdivision records include:
 
 - `code`
 - `countryCode`
-- `name`
+- `name`: the English name
+- `nativeName`: the name in the country's language when it differs
+- `displayName`: the country-language name with the English one set aside
+- `shortName`: what a form shows. The short name GeoNames flags (`isShortName`) in the country's primary language,
+  else its preferred name (`isPreferredName`), else the plain name. When the country's postal data names the unit
+  with fewer words and the chosen name only wraps them in a descriptor, the unit's own words are kept
+  («Granada», «Barcelona»)
+- `officialName`: the full GeoNames name of the unit, untouched («Provincia de Granada»)
+- `searchKeywords`: every name above plus the code, for search
 - `type`
+
+Every admin1 and admin2 unit carries `shortName` and `officialName`. A locality has no names of its own for its
+regions: a consumer reads them from the subdivision of the locality (`subdivisionCode`, `admin1Code`, `admin2Code`).
 
 ### Locality
 

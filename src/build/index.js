@@ -295,6 +295,39 @@ function chooseBestAlternateName(records, preferredLanguageBases, excludedNames 
   return candidates[0]?.name;
 }
 
+/**
+ * The name a form shows for a subdivision, in the country's primary language: the short name GeoNames flags
+ * (`isShortName`), else its preferred name (`isPreferredName`), else the plain GeoNames name. A name equal to the
+ * English one stays eligible, because «Granada» is both. When the postal data of the country names the unit with
+ * fewer words and the chosen name only adds a descriptor around them («Provincia de Granada»,
+ * «Provincia di Milano»), the unit's own words are kept.
+ */
+function resolveShortName(alternateNames, countryLanguages, plainName, postalUnitName) {
+  const languageBases = countryLanguages.map((value) => normalizeLanguageBase(value)).filter(Boolean);
+  const flagged = alternateNames.filter((record) => record.isShortName === true || record.isPreferredName === true);
+  const chosen =
+    chooseBestAlternateName(flagged, languageBases.length > 0 ? [languageBases[0]] : ["en"]) || plainName;
+
+  return narrowToPostalUnit(chosen, postalUnitName);
+}
+
+function narrowToPostalUnit(name, postalUnitName) {
+  const words = String(name ?? "").trim().split(/\s+/).filter(Boolean);
+  const unitWords = normalizeNameComparisonKey(postalUnitName).split(" ").filter(Boolean);
+  if (unitWords.length === 0 || unitWords.length >= words.length) {
+    return name;
+  }
+
+  const comparable = words.map((word) => normalizeNameComparisonKey(word));
+  for (let start = 0; start + unitWords.length <= words.length; start += 1) {
+    if (unitWords.every((unitWord, offset) => comparable[start + offset] === unitWord)) {
+      return words.slice(start, start + unitWords.length).join(" ");
+    }
+  }
+
+  return name;
+}
+
 function resolveSubdivisionLabels(record, options) {
   const {
     countryLanguages,
@@ -365,16 +398,13 @@ function buildPostalSubdivisionNativeHints(postalCodesByCountry) {
   return hintsByCountry;
 }
 
-function inferSubdivisionNativeName(record, countryRecords, postalHints) {
-  const existingName = record.name ?? "";
+/** What the country's postal data calls the unit: GeoNames postal places name provinces and regions briefly. */
+function inferSubdivisionPostalName(record, countryRecords, postalHints) {
   const recordSuffix = String(record.code).split("-").slice(1);
 
   if (record.type === "admin2") {
     const admin2Code = recordSuffix[recordSuffix.length - 1];
-    const directMatch = postalHints?.admin2ByCode?.get(admin2Code);
-    return directMatch && normalizeLookupLabel(directMatch) !== normalizeLookupLabel(existingName)
-      ? directMatch
-      : undefined;
+    return postalHints?.admin2ByCode?.get(admin2Code);
   }
 
   if (record.type === "admin1") {
@@ -394,13 +424,17 @@ function inferSubdivisionNativeName(record, countryRecords, postalHints) {
       admin1Matches.set(nativeAdmin1Name, score + 1);
     }
 
-    const bestMatch = [...admin1Matches.entries()].sort((left, right) => right[1] - left[1])[0]?.[0];
-    if (bestMatch && normalizeLookupLabel(bestMatch) !== normalizeLookupLabel(existingName)) {
-      return bestMatch;
-    }
+    return [...admin1Matches.entries()].sort((left, right) => right[1] - left[1])[0]?.[0];
   }
 
   return undefined;
+}
+
+function inferSubdivisionNativeName(record, countryRecords, postalHints) {
+  const postalName = inferSubdivisionPostalName(record, countryRecords, postalHints);
+  return postalName && normalizeLookupLabel(postalName) !== normalizeLookupLabel(record.name ?? "")
+    ? postalName
+    : undefined;
 }
 
 function buildCountries(input = {}) {
@@ -489,6 +523,7 @@ function buildSubdivisions(input = {}) {
       let nativeName;
       let displayName;
       let baseName = record.name;
+      const plainName = record.name;
 
       const subdivisionNames = resolveSubdivisionLabels(record, {
         countryLanguages,
@@ -506,13 +541,27 @@ function buildSubdivisions(input = {}) {
         nativeName = inferSubdivisionNativeName(record, countryRecords, postalHints);
       }
 
+      const admin1OfficialName = record.type === "admin1" ? admin1OfficialByCode[record.code] : undefined;
+      const alternateNames = Number.isInteger(record.geonameId)
+        ? alternateNamesByGeonameId.get(record.geonameId) ?? []
+        : [];
+
       record.name = baseName;
+      record.officialName = admin1OfficialName || plainName;
       record.nativeName = nativeName;
       record.displayName = displayName || nativeName || record.name;
+      record.shortName = resolveShortName(
+        alternateNames,
+        countryLanguages,
+        record.officialName,
+        inferSubdivisionPostalName(record, countryRecords, postalHints),
+      );
       record.searchKeywords = buildSearchKeywords(
         record.name,
         nativeName,
         record.displayName,
+        record.shortName,
+        record.officialName,
         record.code,
       );
       delete record.geonameId;

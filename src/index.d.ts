@@ -33,6 +33,13 @@ export interface SubdivisionRecord {
     name: string;
     nativeName?: string;
     displayName?: string;
+    /**
+     * What a form shows: the short name GeoNames flags in the country's language, else its preferred name,
+     * else the plain name («Granada», not «Provincia de Granada»).
+     */
+    shortName?: string;
+    /** The full GeoNames name of the unit, untouched («Provincia de Granada»). */
+    officialName?: string;
     searchKeywords?: string[];
     type?: string;
 }

@@ -348,3 +348,135 @@ test("dataset build keeps english, native, and official subdivision labels separ
   assert.equal(andalusia?.nativeName, "Andalucía");
   assert.equal(andalusia?.displayName, "Andalucía");
 });
+
+function buildShortNameDataset({ countryCode, country, subdivisions, subdivisionAlternateNames, geonamesPostalCodes }) {
+  const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
+
+  buildGeoDataset({
+    unM49: [
+      {
+        countryCode,
+        name: country.name,
+        m49: country.m49,
+        continent: "Europe",
+        region: "Europe",
+        subregion: "Southern Europe",
+      },
+    ],
+    isoCountries: [
+      {
+        code: countryCode,
+        iso3: country.iso3,
+        numeric: country.m49,
+        name: country.name,
+        capital: country.capital,
+        continentCode: "EU",
+        tld: country.tld,
+        currencyCode: "EUR",
+        currencyName: "Euro",
+        phonePrefix: country.phonePrefix,
+        postalCodeFormat: "#####",
+        postalCodeRegex: "^[0-9]{5}$",
+        languages: country.languages,
+      },
+    ],
+    isoSubdivisions: subdivisions,
+    subdivisionAlternateNames,
+    admin1OfficialNames: {},
+    geonamesCities: [],
+    geonamesPostalCodes,
+    shippingProfiles: {},
+  });
+
+  return JSON.parse(
+    readFileSync(path.join(packageRoot, "dist", "core", "subdivisions-by-country", `${countryCode}.json`), "utf8"),
+  );
+}
+
+test("a subdivision shows its short name and keeps its official name, even when English reads the same", () => {
+  // Rows as GeoNames serves them for the province of Granada (2517115): Spanish prefers the long form and flags
+  // «Granada» as short, while English prefers and flags «Granada» too.
+  const subdivisions = buildShortNameDataset({
+    countryCode: "ES",
+    country: { name: "Spain", m49: "724", iso3: "ESP", capital: "Madrid", tld: ".es", phonePrefix: "34", languages: ["es-ES"] },
+    subdivisions: [
+      { code: "ES-51", countryCode: "ES", name: "Andalusia", geonameId: 2593109, type: "admin1" },
+      { code: "ES-51-GR", countryCode: "ES", name: "Provincia de Granada", geonameId: 2517115, type: "admin2" },
+      { code: "ES-56-B", countryCode: "ES", name: "Província de Barcelona", geonameId: 3128759, type: "admin2" },
+    ],
+    subdivisionAlternateNames: [
+      { geonameId: 2593109, language: "es", name: "Andalucía", isPreferredName: false, isShortName: true },
+      { geonameId: 2517115, language: "es", name: "Provincia de Granada", isPreferredName: true, isShortName: false },
+      { geonameId: 2517115, language: "es", name: "Granada", isPreferredName: false, isShortName: true },
+      { geonameId: 2517115, language: "en", name: "Granada", isPreferredName: true, isShortName: true },
+      { geonameId: 2517115, language: "en", name: "Granada Province", isPreferredName: false, isShortName: false },
+      { geonameId: 3128759, language: "es", name: "Provincia de Barcelona", isPreferredName: true, isShortName: false },
+      { geonameId: 3128759, language: "es", name: "Barcelona", isPreferredName: false, isShortName: true },
+      { geonameId: 3128759, language: "ca", name: "Província de Barcelona", isPreferredName: true, isShortName: false },
+    ],
+    geonamesPostalCodes: [],
+  });
+
+  const granada = subdivisions.find((entry) => entry.code === "ES-51-GR");
+  assert.equal(granada?.shortName, "Granada");
+  assert.equal(granada?.officialName, "Provincia de Granada");
+  assert.equal(granada?.name, "Granada");
+  assert.ok(granada?.searchKeywords?.includes("Provincia de Granada"));
+
+  const barcelona = subdivisions.find((entry) => entry.code === "ES-56-B");
+  assert.equal(barcelona?.shortName, "Barcelona");
+  assert.equal(barcelona?.officialName, "Província de Barcelona");
+
+  const andalusia = subdivisions.find((entry) => entry.code === "ES-51");
+  assert.equal(andalusia?.shortName, "Andalucía");
+  assert.equal(andalusia?.officialName, "Andalusia");
+});
+
+test("a subdivision without a flagged name in the country's language shows its plain name", () => {
+  const subdivisions = buildShortNameDataset({
+    countryCode: "ES",
+    country: { name: "Spain", m49: "724", iso3: "ESP", capital: "Madrid", tld: ".es", phonePrefix: "34", languages: ["es-ES"] },
+    subdivisions: [{ code: "ES-51-AL", countryCode: "ES", name: "Provincia de Almería", geonameId: 2521858, type: "admin2" }],
+    subdivisionAlternateNames: [
+      { geonameId: 2521858, language: "es", name: "Almeria prov.", isPreferredName: false, isShortName: false },
+    ],
+    geonamesPostalCodes: [],
+  });
+
+  assert.equal(subdivisions[0]?.shortName, "Provincia de Almería");
+  assert.equal(subdivisions[0]?.officialName, "Provincia de Almería");
+});
+
+test("outside Spain the short name keeps only the unit the country's postal data names", () => {
+  // Rows as GeoNames serves them for the province of Milan (3173434): Italian flags the long form as short,
+  // while the Italian postal places name the unit «Milano».
+  const subdivisions = buildShortNameDataset({
+    countryCode: "IT",
+    country: { name: "Italy", m49: "380", iso3: "ITA", capital: "Rome", tld: ".it", phonePrefix: "39", languages: ["it-IT"] },
+    subdivisions: [
+      { code: "IT-09", countryCode: "IT", name: "Lombardy", geonameId: 3174618, type: "admin1" },
+      { code: "IT-09-MI", countryCode: "IT", name: "Città metropolitana di Milano", geonameId: 3173434, type: "admin2" },
+    ],
+    subdivisionAlternateNames: [
+      { geonameId: 3173434, language: "it", name: "Provincia di Milano", isPreferredName: true, isShortName: true },
+      { geonameId: 3173434, language: "en", name: "Province of Milan", isPreferredName: true, isShortName: true },
+      { geonameId: 3173434, language: "es", name: "Provincia de Milán", isPreferredName: true, isShortName: true },
+    ],
+    geonamesPostalCodes: [
+      {
+        countryCode: "IT",
+        postalCode: "20001",
+        placeName: "Inveruno",
+        admin1Name: "Lombardia",
+        admin1Code: "09",
+        admin2Name: "Milano",
+        admin2Code: "MI",
+      },
+    ],
+  });
+
+  const milan = subdivisions.find((entry) => entry.code === "IT-09-MI");
+  assert.equal(milan?.shortName, "Milano");
+  assert.equal(milan?.officialName, "Città metropolitana di Milano");
+  assert.equal(subdivisions.find((entry) => entry.code === "IT-09")?.shortName, "Lombardy");
+});
